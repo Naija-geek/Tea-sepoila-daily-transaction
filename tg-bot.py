@@ -6,7 +6,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 # --- CONFIG ---
 BOT_TOKEN = "7653056986:AAFXoTWhS1DXSqWwcsyGSdlKpX4ODtuisGE"  # Replace with your bot token
-RPC_URL = "https://tea-sepolia.g.alchemy.com/v2/4DjZMUs66vhw5sntF8LS3XOHxMq0T5HT"  # Replace with your Tea Sepolia RPC
+RPC_URL = "https://tea-sepolia.g.alchemy.com/public"  # Replace with your Tea Sepolia RPC
 
 # --- FUNCTIONS ---
 
@@ -130,3 +130,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

@@ -5,7 +5,9 @@ from tqdm import tqdm  # Progress bar library
 
 # --- CONFIG ---
 RPC_URL = "https://tea-sepolia.g.alchemy.com/public"
-WALLET_ADDRESS = "0x1a8f3Dedf7cC58DFF031eA81f944b62828cE07FF".lower()
+
+# Ask user for their wallet address
+WALLET_ADDRESS = input("Enter your wallet address: ").strip().lower()
 
 # --- FUNCTIONS ---
 
@@ -64,7 +66,7 @@ def find_start_block_of_today(latest_block):
 
     return start_block
 
-def count_wallet_transactions_today():
+def count_wallet_transactions_today(wallet_address):
     latest_block = get_latest_block()
     start_block = find_start_block_of_today(latest_block)
 
@@ -91,7 +93,7 @@ def count_wallet_transactions_today():
                 if 'result' in res and res['result']:
                     transactions = res['result']['transactions']
                     for tx in transactions:
-                        if tx.get('from', '').lower() == WALLET_ADDRESS:
+                        if tx.get('from', '').lower() == wallet_address:
                             total_tx += 1
             batch_calls = []
             progress.update(batch_size)
@@ -103,5 +105,7 @@ def count_wallet_transactions_today():
 
 if __name__ == "__main__":
     print(f"Checking daily transactions for wallet {WALLET_ADDRESS}...")
-    total_tx_today = count_wallet_transactions_today()
+    total_tx_today = count_wallet_transactions_today(WALLET_ADDRESS)
     print(f"\n✅ Wallet {WALLET_ADDRESS} made {total_tx_today} transactions today.")
+
+
