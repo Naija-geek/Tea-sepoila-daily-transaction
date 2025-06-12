@@ -5,7 +5,6 @@ const { DateTime } = require('luxon');
 const RPC_URL = "https://tea-sepolia.g.alchemy.com/public";
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname));
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -118,6 +117,70 @@ app.post('/scan', async (req, res) => {
         res.json({ total_transactions: totalTxToday });
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/scan-progress', async (req, res) => {
+    res.set({
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+    res.flushHeaders();
+
+    const walletAddress = (req.query.wallet_address || '').trim().toLowerCase();
+
+    try {
+        const latestBlock = await getLatestBlock();
+        const startBlock = await findStartBlockOfToday(latestBlock);
+
+        let totalTx = 0;
+        const batchSize = 800;
+        const blockRange = [];
+        for (let i = startBlock; i <= latestBlock; i++) blockRange.push(i);
+
+        let batchCalls = [];
+        const totalBlocks = blockRange.length;
+        let processedBlocks = 0;
+        const startTime = Date.now();
+
+        for (let i = 0; i < blockRange.length; i++) {
+            const blockNumber = blockRange[i];
+            batchCalls.push({
+                jsonrpc: "2.0",
+                method: "eth_getBlockByNumber",
+                params: [ '0x' + blockNumber.toString(16), true ],
+                id: blockNumber
+            });
+
+            if (batchCalls.length === batchSize || blockNumber === latestBlock) {
+                const responses = await rpcBatch(batchCalls);
+                for (const res of responses) {
+                    if (res.result && res.result.transactions) {
+                        for (const tx of res.result.transactions) {
+                            if ((tx.from || '').toLowerCase() === walletAddress) {
+                                totalTx += 1;
+                            }
+                        }
+                    }
+                }
+                processedBlocks += batchCalls.length;
+                const elapsed = (Date.now() - startTime) / 1000;
+                const percent = (processedBlocks / totalBlocks) * 100;
+                const eta = processedBlocks > 0 ? ((elapsed / processedBlocks) * (totalBlocks - processedBlocks)) : 0;
+                // Only send percent and eta as requested
+                res.write(`data: ${JSON.stringify({
+                    percent: percent.toFixed(2),
+                    eta: eta.toFixed(1)
+                })}\n\n`);
+                batchCalls = [];
+            }
+        }
+        res.write(`data: ${JSON.stringify({ done: true, total_transactions: totalTx })}\n\n`);
+        res.end();
+    } catch (e) {
+        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.end();
     }
 });
 
