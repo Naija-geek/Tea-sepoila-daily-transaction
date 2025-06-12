@@ -5,6 +5,7 @@ const { DateTime } = require('luxon');
 const RPC_URL = "https://tea-sepolia.g.alchemy.com/public";
 const app = express();
 app.use(express.json());
+app.use(express.static(__dirname));
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
