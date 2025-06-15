@@ -118,36 +118,27 @@
         <div id="result"></div>
     </div>
     <script>
-        document.getElementById('scanForm').addEventListener('submit', function(e) {
+        document.getElementById('scanForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const wallet = document.getElementById('wallet_address').value.trim();
-            document.getElementById('result').innerHTML = `
-                <div id="progress-bar">
-                    <div id="progress-fill"></div>
-                </div>
-                <div id="progress-text">Starting scan...</div>
-            `;
-
-            const evtSource = new EventSource(`/scan-progress?wallet_address=${encodeURIComponent(wallet)}`);
-            evtSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                if (data.error) {
-                    document.getElementById('result').innerHTML = `<span style="color:#dc2626;">Error: ${data.error}</span>`;
-                    evtSource.close();
-                } else if (data.done) {
-                    document.getElementById('result').innerHTML = `
-                        <div style="color:#059669;font-size:1.15em;">
-                            <span style="font-size:1.5em;">&#9989;</span> 
-                            Total transactions today: <b>${data.total_transactions}</b>
-                        </div>
-                    `;
-                    evtSource.close();
+            document.getElementById('result').textContent = "Scanning...";
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet_address: wallet })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('result').textContent =
+                        `Total transactions today: ${data.total_transactions}`;
                 } else {
-                    document.getElementById('progress-fill').style.width = data.percent + "%";
-                    document.getElementById('progress-text').textContent =
-                        `Scanning:(${data.percent}%). ETA: ${Math.ceil(data.eta)}s`;
+                    document.getElementById('result').textContent =
+                        `Error: ${data.error || 'Unknown error'}`;
                 }
-            };
+            } catch (err) {
+                document.getElementById('result').textContent = "Network error.";
+            }
         });
     </script>
 </body>
